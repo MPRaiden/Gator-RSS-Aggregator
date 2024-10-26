@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 )
 
 import (
@@ -10,11 +11,17 @@ import (
 
 func main() {
 	// Set user name on config file
-	gatorConfig := config.Read(config.ConfigFileName)
+	gatorConfig, err := config.Read()
+	if err != nil {
+		log.Fatal(err)
+	}
 	gatorConfig.SetUser("mpraiden")
 
 	// Read file again after update
-	gatorConfig = config.Read(config.ConfigFileName)
-	fmt.Println(gatorConfig)
+	gatorConfig, err = config.Read()
+	if err != nil {
+		log.Fatal(err)
+	}
 
+	fmt.Println(gatorConfig.DBURL)
 }

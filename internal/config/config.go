@@ -2,7 +2,6 @@ package config
 
 import (
 	"encoding/json"
-	"github.com/MPRaiden/gator/internal/general"
 	"os"
 )
 
@@ -13,27 +12,35 @@ type Config struct {
 	CurrentUserName string `json:"current_user_name"`
 }
 
-func GetConfigFileFullPath(fileName string) (string, error) {
+func getConfigFileFullPath() (string, error) {
 	homeDir, err := os.UserHomeDir()
-	general.CheckError(err, "func GetConfigFileFullPath(): error getting user home directory!")
+	if err != nil {
+		return "", err
+	}
 
-	fileToRead := homeDir + "/" + fileName
+	fileToRead := homeDir + "/" + ConfigFileName
 
 	return fileToRead, nil
 }
 
-func Read(fileName string) Config {
-	fileToRead, err := GetConfigFileFullPath(ConfigFileName)
-	general.CheckError(err, "func Read(): error getting config file full path!")
+func Read() (Config, error) {
+	fileToRead, err := getConfigFileFullPath()
+	if err != nil {
+		return Config{}, err
+	}
 
 	dat, err := os.ReadFile(fileToRead)
-	general.CheckError(err, "func Read(): error reading from file!")
+	if err != nil {
+		return Config{}, err
+	}
 
 	configStruct := Config{}
 	err = json.Unmarshal(dat, &configStruct)
-	general.CheckError(err, "func Read(): error unmarshalling struct!")
+	if err != nil {
+		return Config{}, err
+	}
 
-	return configStruct
+	return configStruct, nil
 }
 
 func (c *Config) SetUser(currentUser string) error {
@@ -42,16 +49,20 @@ func (c *Config) SetUser(currentUser string) error {
 }
 
 func write(c Config) error {
-	fullFilePath, err := GetConfigFileFullPath(ConfigFileName)
-	general.CheckError(err, "func write(): error retrieving config file full path!")
+	fullFilePath, err := getConfigFileFullPath()
+	if err != nil {
+		return err
+	}
 
-	// Marshal the struct to json byte slice
 	jsonBytes, err := json.Marshal(c)
-	general.CheckError(err, "func write(): error marshalling struct to json!")
+	if err != nil {
+		return err
+	}
 
-	// Write update to config file
 	err = os.WriteFile(fullFilePath, jsonBytes, 0644)
-	general.CheckError(err, "func write(): error writting json file!")
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
