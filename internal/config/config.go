@@ -35,7 +35,6 @@ func Read(fileName string) Config {
 	return configStruct
 }
 
-func (c Config) SetUser(currentUser string) Config {
+func (c *Config) SetUser(currentUser string) {
 	c.CurrentUserName = currentUser
-	return c
 }
