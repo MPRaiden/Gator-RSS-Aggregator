@@ -2,7 +2,7 @@ package config
 
 import (
 	"encoding/json"
-	"fmt"
+	"github.com/MPRaiden/gator/internal/general"
 	"os"
 )
 
@@ -13,16 +13,9 @@ type Config struct {
 	CurrentUserName string `json:"current_user_name"`
 }
 
-func check(e error) {
-	if e != nil {
-		fmt.Println(e)
-		return
-	}
-}
-
 func GetConfigFileFullPath(fileName string) (string, error) {
 	homeDir, err := os.UserHomeDir()
-	check(err)
+	general.CheckError(err)
 
 	fileToRead := homeDir + "/" + fileName
 
@@ -31,13 +24,13 @@ func GetConfigFileFullPath(fileName string) (string, error) {
 
 func Read(fileName string) Config {
 	fileToRead, err := GetConfigFileFullPath(ConfigFileName)
-	check(err)
+	general.CheckError(err)
 	dat, err := os.ReadFile(fileToRead)
-	check(err)
+	general.CheckError(err)
 
 	configStruct := Config{}
 	err = json.Unmarshal(dat, &configStruct)
-	check(err)
+	general.CheckError(err)
 
 	return configStruct
 }

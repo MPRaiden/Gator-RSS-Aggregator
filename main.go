@@ -8,6 +8,7 @@ import (
 
 import (
 	"github.com/MPRaiden/gator/internal/config"
+	"github.com/MPRaiden/gator/internal/general"
 )
 
 func main() {
@@ -16,24 +17,15 @@ func main() {
 
 	// Marshal the struct to json byte slice
 	jsonBytes, err := json.Marshal(gatorConfig)
-	if err != nil {
-		fmt.Println("Error while marshaling gatorConfig struct!")
-		return
-	}
+	general.CheckError(err)
 
 	// Retrieve config file full path
 	filepath, err := config.GetConfigFileFullPath(config.ConfigFileName)
-	if err != nil {
-		fmt.Println("Error while retrieving config file full path!")
-		return
-	}
+	general.CheckError(err)
 
 	// Write update to config file
 	err = os.WriteFile(filepath, jsonBytes, 0644)
-	if err != nil {
-		fmt.Println("Error while writting to file!")
-		return
-	}
+	general.CheckError(err)
 
 	// Read file again after update
 	gatorConfig = config.Read(config.ConfigFileName)
