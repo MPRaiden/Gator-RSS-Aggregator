@@ -12,17 +12,6 @@ type Config struct {
 	CurrentUserName string `json:"current_user_name"`
 }
 
-func getConfigFileFullPath() (string, error) {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-
-	fileToRead := homeDir + "/" + ConfigFileName
-
-	return fileToRead, nil
-}
-
 func Read() (Config, error) {
 	fileToRead, err := getConfigFileFullPath()
 	if err != nil {
@@ -46,6 +35,17 @@ func Read() (Config, error) {
 func (c *Config) SetUser(currentUser string) error {
 	c.CurrentUserName = currentUser
 	return write(*c)
+}
+
+func getConfigFileFullPath() (string, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+
+	fileToRead := homeDir + "/" + ConfigFileName
+
+	return fileToRead, nil
 }
 
 func write(c Config) error {
