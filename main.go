@@ -39,7 +39,8 @@ func main() {
 
 	// Get cmd line arguments
 	if len(os.Args) < 2 {
-		log.Fatal("Needs at least 2 command line arguments!")
+		fmt.Println("Error: not enough arguments")
+		os.Exit(1)
 	}
 
 	argsWithoutProgram := os.Args[1:]
@@ -53,7 +54,8 @@ func main() {
 	}
 	err = cmds.run(&s, cmd)
 	if err != nil {
-		log.Fatal("error occured during the execution of cmds.run():", err)
+		fmt.Printf("Error %v\n", err)
+		os.Exit(1)
 	}
 
 	// Read file again after update
@@ -61,8 +63,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	fmt.Println(gatorConfig.DBURL)
 }
 
 func (c *commands) register(name string, f func(*state, command) error) {
@@ -70,27 +70,22 @@ func (c *commands) register(name string, f func(*state, command) error) {
 }
 
 func (c *commands) run(s *state, cmd command) error {
-	_, ok := c.commandNames[cmd.name]
+	handler, ok := c.commandNames[cmd.name]
 	if !ok {
-		return fmt.Errorf("func run(): provided command not registed in commands map!")
+		return fmt.Errorf("func run(): provided command not registered in commands map!")
 	}
-
-	err := c.commandNames[cmd.name](s, cmd)
-	if err != nil {
-		return fmt.Errorf("func run(): error occured while running command: %q", cmd.name)
-	}
-	return nil
+	return handler(s, cmd)
 }
 
 func handlerLogin(s *state, cmd command) error {
 	if len(cmd.arguments) == 0 {
-		return errors.New("func handlerLogin(): command.arguments cannot be empty!")
+		return errors.New("login command requires a username")
 	}
 
 	if err := s.config.SetUser(cmd.arguments[0]); err != nil {
 		return fmt.Errorf("failed to set user: %w: ", err)
 	}
-	fmt.Println("func handlerLogin(): user name: ", cmd.arguments[0], " has been set")
+	fmt.Println("User name: ", cmd.arguments[0], " has been set")
 
 	return nil
 }
