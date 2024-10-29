@@ -1,16 +1,23 @@
 package main
 
 import (
+	"context"
+	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"log"
 	"os"
+	"time"
 
 	"github.com/MPRaiden/gator/internal/config"
+	"github.com/MPRaiden/gator/internal/database"
 )
+import _ "github.com/lib/pq"
 
 type state struct {
-	config *config.Config
+	cfg *config.Config
+	db  *database.Queries
 }
 
 type command struct {
@@ -29,13 +36,22 @@ func main() {
 		log.Fatal(err)
 	}
 
+	db, err := sql.Open("postgres", gatorConfig.DBURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	queries := database.New(db)
+
 	s := state{
-		config: &gatorConfig,
+		cfg: &gatorConfig,
+		db:  queries,
 	}
 
 	// Create a commands struct and register a login handler function on it
 	cmds := commands{commandNames: make(map[string]func(*state, command) error)}
 	cmds.register("login", handlerLogin)
+	cmds.register("register", handlerRegister)
 
 	// Get cmd line arguments
 	if len(os.Args) < 2 {
@@ -82,10 +98,52 @@ func handlerLogin(s *state, cmd command) error {
 		return errors.New("login command requires a username")
 	}
 
-	if err := s.config.SetUser(cmd.arguments[0]); err != nil {
+	loginName := cmd.arguments[0]
+	_, err := s.db.GetUser(context.Background(), loginName)
+	if errors.Is(err, sql.ErrNoRows) {
+		return errors.New("User does not exist in database")
+	} else if err != nil {
+		return fmt.Errorf("failed to query user: %w", err)
+	}
+
+	if err := s.cfg.SetUser(cmd.arguments[0]); err != nil {
 		return fmt.Errorf("failed to set user: %w: ", err)
 	}
 	fmt.Println("User name: ", cmd.arguments[0], " has been set")
+
+	return nil
+}
+
+func handlerRegister(s *state, cmd command) error {
+	if len(cmd.arguments) < 1 {
+		return errors.New("register command requires a name")
+	}
+
+	name := cmd.arguments[0]
+
+	_, err := s.db.GetUser(context.Background(), name)
+	if err == nil {
+		return fmt.Errorf("user already exists in database")
+	} else if !errors.Is(err, sql.ErrNoRows) {
+		return fmt.Errorf("failed to query user: %w", err)
+	}
+
+	userParams := database.CreateUserParams{
+		ID:        uuid.New(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		Name:      name,
+	}
+
+	newUser, err := s.db.CreateUser(context.Background(), userParams)
+	if err != nil {
+		return fmt.Errorf("failed to create new user: %w", err)
+	}
+
+	s.cfg.SetUser(name)
+
+	fmt.Printf("Successfully created new user: %s\n", name)
+	log.Printf("User details: %+v\n", newUser)
 
 	return nil
 }
