@@ -52,6 +52,7 @@ func main() {
 	cmds := commands{commandNames: make(map[string]func(*state, command) error)}
 	cmds.register("login", handlerLogin)
 	cmds.register("register", handlerRegister)
+	cmds.register("reset", handlerResetDB)
 
 	// Get cmd line arguments
 	if len(os.Args) < 2 {
@@ -145,5 +146,14 @@ func handlerRegister(s *state, cmd command) error {
 	fmt.Printf("Successfully created new user: %s\n", name)
 	log.Printf("User details: %+v\n", newUser)
 
+	return nil
+}
+
+func handlerResetDB(s *state, cmd command) error {
+	err := s.db.DelUsers(context.Background())
+	if err != nil {
+		return errors.New("error while reseting database")
+	}
+	log.Printf("Database reset successfull!")
 	return nil
 }

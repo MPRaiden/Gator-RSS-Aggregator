@@ -14,3 +14,7 @@ from users
 where name = $1
 ;
 
+-- name: DelUsers :exec
+delete from users
+;
+
