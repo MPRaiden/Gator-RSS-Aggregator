@@ -3,17 +3,23 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/xml"
 	"errors"
 	"fmt"
-	"github.com/google/uuid"
+	"html"
+	"io"
 	"log"
+	"net/http"
 	"os"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/MPRaiden/gator/internal/config"
 	"github.com/MPRaiden/gator/internal/database"
+
+	_ "github.com/lib/pq"
 )
-import _ "github.com/lib/pq"
 
 type state struct {
 	cfg *config.Config
@@ -27,6 +33,22 @@ type command struct {
 
 type commands struct {
 	commandNames map[string]func(*state, command) error
+}
+
+type RSSFeed struct {
+	Channel struct {
+		Title       string    `xml:"title"`
+		Link        string    `xml:"link"`
+		Description string    `xml:"description"`
+		Item        []RSSItem `xml:"item"`
+	} `xml:"channel"`
+}
+
+type RSSItem struct {
+	Title       string `xml:"title"`
+	Link        string `xml:"link"`
+	Description string `xml:"description"`
+	PubDate     string `xml:"pubDate"`
 }
 
 func main() {
@@ -53,6 +75,7 @@ func main() {
 	cmds.register("login", handlerLogin)
 	cmds.register("register", handlerRegister)
 	cmds.register("reset", handlerResetDB)
+	cmds.register("agg", handlerFetchFeed)
 
 	// Get cmd line arguments
 	if len(os.Args) < 2 {
@@ -92,6 +115,54 @@ func (c *commands) run(s *state, cmd command) error {
 		return fmt.Errorf("func run(): provided command not registered in commands map!")
 	}
 	return handler(s, cmd)
+}
+
+func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
+	rssFeed := &RSSFeed{}
+
+	req, err := http.NewRequestWithContext(ctx, "GET", feedURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("Error creating request with context: %v", err)
+	}
+
+	req.Header.Add("User-Agent", "gator")
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("Error making request: %v", err)
+	}
+
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, fmt.Errorf("Error reading from request body: %v", err)
+	}
+	res.Body.Close()
+
+	err = xml.Unmarshal(data, rssFeed)
+	if err != nil {
+		return nil, fmt.Errorf("Error unmarshalling data: %v", err)
+	}
+
+	rssFeed.Channel.Title = html.UnescapeString(rssFeed.Channel.Title)
+	rssFeed.Channel.Description = html.UnescapeString(rssFeed.Channel.Description)
+
+	for i := range rssFeed.Channel.Item {
+		rssFeed.Channel.Item[i].Title = html.UnescapeString(rssFeed.Channel.Item[i].Title)
+		rssFeed.Channel.Item[i].Description = html.UnescapeString(rssFeed.Channel.Item[i].Description)
+	}
+
+	return rssFeed, nil
+}
+
+func handlerFetchFeed(s *state, cmd command) error {
+	ctx := context.Background()
+	rssFeed, err := fetchFeed(ctx, "https://www.wagslane.dev/index.xml")
+	if err != nil {
+		return fmt.Errorf("Error while fetching feed: %v", err)
+	}
+	fmt.Println(*rssFeed)
+
+	return nil
 }
 
 func handlerLogin(s *state, cmd command) error {
