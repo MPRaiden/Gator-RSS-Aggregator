@@ -107,6 +107,19 @@ func handlerGetUsers(s *state, cmd command) error {
 	return nil
 }
 
+func handlerListFeeds(s *state, cmd command) error {
+	feeds, err := s.db.ListFeeds(context.Background())
+	if err != nil {
+		return fmt.Errorf("Error while retrieving feeds from database %v", err)
+	}
+	for _, feed := range feeds {
+		fmt.Printf("* %v\n", feed.Name)
+		fmt.Printf("* %v\n", feed.Url)
+		fmt.Printf("* %v\n", feed.Name_2)
+	}
+	return nil
+}
+
 func main() {
 	// Read from config file and create a state struct that holds a pointer to the config file
 	gatorConfig, err := config.Read()
@@ -134,6 +147,7 @@ func main() {
 	cmds.register("users", handlerGetUsers)
 	cmds.register("agg", handlerFetchFeed)
 	cmds.register("addfeed", handlerAddFeed)
+	cmds.register("feeds", handlerListFeeds)
 
 	// Get cmd line arguments
 	if len(os.Args) < 2 {
