@@ -51,75 +51,6 @@ type RSSItem struct {
 	PubDate     string `xml:"pubDate"`
 }
 
-func handlerAddFeed(s *state, cmd command) error {
-	currentUser := s.cfg.CurrentUserName
-	user, err := s.db.GetUser(context.Background(), currentUser)
-	if err != nil {
-		return fmt.Errorf("Error while retrieving user from database: %v", err)
-	}
-
-	if len(cmd.arguments) < 2 {
-		return fmt.Errorf("Less than 2 arguments provided!")
-	}
-	feedName := cmd.arguments[0]
-	feedURL := cmd.arguments[1]
-
-	userID := uuid.NullUUID{
-		UUID:  user.ID,
-		Valid: true,
-	}
-
-	feedParams := database.CreateFeedParams{
-		ID:        uuid.New(),
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-		Name:      feedName,
-		Url:       feedURL,
-		UserID:    userID,
-	}
-
-	feed, err := s.db.CreateFeed(context.Background(), feedParams)
-	if err != nil {
-		return fmt.Errorf("Error while creating new feed: %v", err)
-	}
-
-	addFeed(feed.Name, feed.Url)
-	return nil
-}
-
-func addFeed(name, url string) {
-	fmt.Printf("Creating new feed %s with the following url %s", name, url)
-}
-
-func handlerGetUsers(s *state, cmd command) error {
-	users, err := s.db.GetUsers(context.Background())
-	if err != nil {
-		return fmt.Errorf("Error while getting users from database %v", err)
-	}
-
-	for _, user := range users {
-		if s.cfg.CurrentUserName == user {
-			fmt.Printf("* %s (current)\n", user)
-		} else {
-			fmt.Printf("* %s\n", user)
-		}
-	}
-	return nil
-}
-
-func handlerListFeeds(s *state, cmd command) error {
-	feeds, err := s.db.ListFeeds(context.Background())
-	if err != nil {
-		return fmt.Errorf("Error while retrieving feeds from database %v", err)
-	}
-	for _, feed := range feeds {
-		fmt.Printf("* %v\n", feed.Name)
-		fmt.Printf("* %v\n", feed.Url)
-		fmt.Printf("* %v\n", feed.Name_2)
-	}
-	return nil
-}
-
 func main() {
 	// Read from config file and create a state struct that holds a pointer to the config file
 	gatorConfig, err := config.Read()
@@ -298,5 +229,74 @@ func handlerResetDB(s *state, cmd command) error {
 		return errors.New("error while reseting database")
 	}
 	log.Printf("Database reset successfull!")
+	return nil
+}
+
+func handlerAddFeed(s *state, cmd command) error {
+	currentUser := s.cfg.CurrentUserName
+	user, err := s.db.GetUser(context.Background(), currentUser)
+	if err != nil {
+		return fmt.Errorf("Error while retrieving user from database: %v", err)
+	}
+
+	if len(cmd.arguments) < 2 {
+		return fmt.Errorf("Less than 2 arguments provided!")
+	}
+	feedName := cmd.arguments[0]
+	feedURL := cmd.arguments[1]
+
+	userID := uuid.NullUUID{
+		UUID:  user.ID,
+		Valid: true,
+	}
+
+	feedParams := database.CreateFeedParams{
+		ID:        uuid.New(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		Name:      feedName,
+		Url:       feedURL,
+		UserID:    userID,
+	}
+
+	feed, err := s.db.CreateFeed(context.Background(), feedParams)
+	if err != nil {
+		return fmt.Errorf("Error while creating new feed: %v", err)
+	}
+
+	addFeed(feed.Name, feed.Url)
+	return nil
+}
+
+func addFeed(name, url string) {
+	fmt.Printf("Creating new feed %s with the following url %s", name, url)
+}
+
+func handlerGetUsers(s *state, cmd command) error {
+	users, err := s.db.GetUsers(context.Background())
+	if err != nil {
+		return fmt.Errorf("Error while getting users from database %v", err)
+	}
+
+	for _, user := range users {
+		if s.cfg.CurrentUserName == user {
+			fmt.Printf("* %s (current)\n", user)
+		} else {
+			fmt.Printf("* %s\n", user)
+		}
+	}
+	return nil
+}
+
+func handlerListFeeds(s *state, cmd command) error {
+	feeds, err := s.db.ListFeeds(context.Background())
+	if err != nil {
+		return fmt.Errorf("Error while retrieving feeds from database %v", err)
+	}
+	for _, feed := range feeds {
+		fmt.Printf("* %v\n", feed.Name)
+		fmt.Printf("* %v\n", feed.Url)
+		fmt.Printf("* %v\n", feed.Name_2)
+	}
 	return nil
 }
