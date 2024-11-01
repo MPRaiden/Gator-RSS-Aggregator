@@ -18,3 +18,9 @@ where name = $1
 delete from users
 ;
 
+-- name: GetUsers :many
+select name
+from users
+order by name
+;
+

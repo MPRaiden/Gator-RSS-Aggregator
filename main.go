@@ -91,6 +91,22 @@ func addFeed(name, url string) {
 	fmt.Printf("Creating new feed %s with the following url %s", name, url)
 }
 
+func handlerGetUsers(s *state, cmd command) error {
+	users, err := s.db.GetUsers(context.Background())
+	if err != nil {
+		return fmt.Errorf("Error while getting users from database %v", err)
+	}
+
+	for _, user := range users {
+		if s.cfg.CurrentUserName == user {
+			fmt.Printf("* %s (current)\n", user)
+		} else {
+			fmt.Printf("* %s\n", user)
+		}
+	}
+	return nil
+}
+
 func main() {
 	// Read from config file and create a state struct that holds a pointer to the config file
 	gatorConfig, err := config.Read()
@@ -115,6 +131,7 @@ func main() {
 	cmds.register("login", handlerLogin)
 	cmds.register("register", handlerRegister)
 	cmds.register("reset", handlerResetDB)
+	cmds.register("users", handlerGetUsers)
 	cmds.register("agg", handlerFetchFeed)
 	cmds.register("addfeed", handlerAddFeed)
 
