@@ -51,6 +51,46 @@ type RSSItem struct {
 	PubDate     string `xml:"pubDate"`
 }
 
+func handlerAddFeed(s *state, cmd command) error {
+	currentUser := s.cfg.CurrentUserName
+	user, err := s.db.GetUser(context.Background(), currentUser)
+	if err != nil {
+		return fmt.Errorf("Error while retrieving user from database: %v", err)
+	}
+
+	if len(cmd.arguments) < 2 {
+		return fmt.Errorf("Less than 2 arguments provided!")
+	}
+	feedName := cmd.arguments[0]
+	feedURL := cmd.arguments[1]
+
+	userID := uuid.NullUUID{
+		UUID:  user.ID,
+		Valid: true,
+	}
+
+	feedParams := database.CreateFeedParams{
+		ID:        uuid.New(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		Name:      feedName,
+		Url:       feedURL,
+		UserID:    userID,
+	}
+
+	feed, err := s.db.CreateFeed(context.Background(), feedParams)
+	if err != nil {
+		return fmt.Errorf("Error while creating new feed: %v", err)
+	}
+
+	addFeed(feed.Name, feed.Url)
+	return nil
+}
+
+func addFeed(name, url string) {
+	fmt.Printf("Creating new feed %s with the following url %s", name, url)
+}
+
 func main() {
 	// Read from config file and create a state struct that holds a pointer to the config file
 	gatorConfig, err := config.Read()
@@ -76,6 +116,7 @@ func main() {
 	cmds.register("register", handlerRegister)
 	cmds.register("reset", handlerResetDB)
 	cmds.register("agg", handlerFetchFeed)
+	cmds.register("addfeed", handlerAddFeed)
 
 	// Get cmd line arguments
 	if len(os.Args) < 2 {
