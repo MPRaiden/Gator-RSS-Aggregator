@@ -79,6 +79,8 @@ func main() {
 	cmds.register("agg", handlerFetchFeed)
 	cmds.register("addfeed", handlerAddFeed)
 	cmds.register("feeds", handlerListFeeds)
+	cmds.register("follow", handlerFollow)
+	cmds.register("following", handlerFollowing)
 
 	// Get cmd line arguments
 	if len(os.Args) < 2 {
@@ -155,6 +157,74 @@ func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
 	}
 
 	return rssFeed, nil
+}
+
+func handlerFollowing(s *state, _ command) error {
+	userName := s.cfg.CurrentUserName
+	currUser, err := s.db.GetUser(context.Background(), userName)
+	if err != nil {
+		return fmt.Errorf("couldn't get user: %v", err)
+	}
+
+	userID := uuid.NullUUID{
+		UUID:  currUser.ID,
+		Valid: true,
+	}
+	userFeedFollows, err := s.db.GetFeedFollowsForUser(context.Background(), userID)
+	if err != nil {
+		return fmt.Errorf("couldn't get feed follows: %v", err)
+	}
+
+	for _, userFeed := range userFeedFollows {
+		fmt.Printf("* %v", userFeed.FeedName)
+	}
+
+	return nil
+}
+
+func handlerFollow(s *state, cmd command) error {
+	if len(cmd.arguments) < 1 {
+		return fmt.Errorf("Less than 1 command argument provided")
+	}
+	url := cmd.arguments[0]
+
+	user, err := s.db.GetUser(context.Background(), s.cfg.CurrentUserName)
+	if err != nil {
+		return err
+	}
+
+	feed, err := s.db.GetFeedByURL(context.Background(), url)
+	if err != nil {
+		return err
+	}
+
+	userID := uuid.NullUUID{
+		UUID:  user.ID,
+		Valid: true,
+	}
+	feedID := uuid.NullUUID{
+		UUID:  feed.ID,
+		Valid: true,
+	}
+	feedFollowParams := database.CreateFeedFollowParams{
+		ID:        uuid.New(),
+		CreatedAt: time.Now().UTC(),
+		UpdatedAt: time.Now().UTC(),
+		UserID:    userID,
+		FeedID:    feedID,
+	}
+
+	feedFollows, err := s.db.CreateFeedFollow(context.Background(), feedFollowParams)
+	if err != nil {
+		return fmt.Errorf("Error while creating feed follow %v", err)
+	}
+
+	if len(feedFollows) > 1 {
+		feedFollow := feedFollows[0]
+		fmt.Printf("Feed '%v' followed by user '%v'\n", feedFollow.FeedName, feedFollow.UserName)
+	}
+
+	return nil
 }
 
 func handlerFetchFeed(s *state, cmd command) error {
@@ -265,6 +335,24 @@ func handlerAddFeed(s *state, cmd command) error {
 	}
 
 	addFeed(feed.Name, feed.Url)
+
+	feedID := uuid.NullUUID{
+		UUID:  feed.ID,
+		Valid: true,
+	}
+	feedFollowArgs := database.CreateFeedFollowParams{
+		ID:        uuid.New(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		UserID:    userID,
+		FeedID:    feedID,
+	}
+
+	_, err = s.db.CreateFeedFollow(context.Background(), feedFollowArgs)
+	if err != nil {
+		return fmt.Errorf("Error while creating feed follow %v", err)
+	}
+
 	return nil
 }
 

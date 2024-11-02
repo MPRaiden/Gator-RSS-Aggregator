@@ -17,3 +17,9 @@ join users on feeds.user_id = users.id
 order by feeds.name
 ;
 
+-- name: GetFeedByURL :one
+select *
+from feeds
+where url = $1
+;
+
