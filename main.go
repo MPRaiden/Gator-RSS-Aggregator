@@ -77,10 +77,10 @@ func main() {
 	cmds.register("reset", handlerResetDB)
 	cmds.register("users", handlerGetUsers)
 	cmds.register("agg", handlerFetchFeed)
-	cmds.register("addfeed", handlerAddFeed)
+	cmds.register("addfeed", middlewareLoggedIn(handlerAddFeed))
 	cmds.register("feeds", handlerListFeeds)
-	cmds.register("follow", handlerFollow)
-	cmds.register("following", handlerFollowing)
+	cmds.register("follow", middlewareLoggedIn(handlerFollow))
+	cmds.register("following", middlewareLoggedIn(handlerFollowing))
 
 	// Get cmd line arguments
 	if len(os.Args) < 2 {
@@ -159,15 +159,9 @@ func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
 	return rssFeed, nil
 }
 
-func handlerFollowing(s *state, _ command) error {
-	userName := s.cfg.CurrentUserName
-	currUser, err := s.db.GetUser(context.Background(), userName)
-	if err != nil {
-		return fmt.Errorf("couldn't get user: %v", err)
-	}
-
+func handlerFollowing(s *state, _ command, user database.User) error {
 	userID := uuid.NullUUID{
-		UUID:  currUser.ID,
+		UUID:  user.ID,
 		Valid: true,
 	}
 	userFeedFollows, err := s.db.GetFeedFollowsForUser(context.Background(), userID)
@@ -176,22 +170,17 @@ func handlerFollowing(s *state, _ command) error {
 	}
 
 	for _, userFeed := range userFeedFollows {
-		fmt.Printf("* %v", userFeed.FeedName)
+		fmt.Printf("* %v\n", userFeed.FeedName)
 	}
 
 	return nil
 }
 
-func handlerFollow(s *state, cmd command) error {
+func handlerFollow(s *state, cmd command, user database.User) error {
 	if len(cmd.arguments) < 1 {
 		return fmt.Errorf("Less than 1 command argument provided")
 	}
 	url := cmd.arguments[0]
-
-	user, err := s.db.GetUser(context.Background(), s.cfg.CurrentUserName)
-	if err != nil {
-		return err
-	}
 
 	feed, err := s.db.GetFeedByURL(context.Background(), url)
 	if err != nil {
@@ -302,13 +291,7 @@ func handlerResetDB(s *state, cmd command) error {
 	return nil
 }
 
-func handlerAddFeed(s *state, cmd command) error {
-	currentUser := s.cfg.CurrentUserName
-	user, err := s.db.GetUser(context.Background(), currentUser)
-	if err != nil {
-		return fmt.Errorf("Error while retrieving user from database: %v", err)
-	}
-
+func handlerAddFeed(s *state, cmd command, user database.User) error {
 	if len(cmd.arguments) < 2 {
 		return fmt.Errorf("Less than 2 arguments provided!")
 	}
