@@ -77,10 +77,11 @@ func main() {
 	cmds.register("reset", handlerResetDB)
 	cmds.register("users", handlerGetUsers)
 	cmds.register("agg", handlerFetchFeed)
-	cmds.register("addfeed", middlewareLoggedIn(handlerAddFeed))
 	cmds.register("feeds", handlerListFeeds)
+	cmds.register("addfeed", middlewareLoggedIn(handlerAddFeed))
 	cmds.register("follow", middlewareLoggedIn(handlerFollow))
 	cmds.register("following", middlewareLoggedIn(handlerFollowing))
+	cmds.register("unfollow", middlewareLoggedIn(handlerUnfollow))
 
 	// Get cmd line arguments
 	if len(os.Args) < 2 {
@@ -157,6 +158,28 @@ func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
 	}
 
 	return rssFeed, nil
+}
+
+func handlerUnfollow(s *state, cmd command, user database.User) error {
+	if len(cmd.arguments) < 1 {
+		return fmt.Errorf("Less than 1 command argument provided")
+	}
+	url := cmd.arguments[0]
+
+	userID := uuid.NullUUID{
+		UUID:  user.ID,
+		Valid: true,
+	}
+	delFeedFollowArgs := database.DeleteFeedFollowParams{
+		UserID: userID,
+		Url:    url,
+	}
+	err := s.db.DeleteFeedFollow(context.Background(), delFeedFollowArgs)
+	if err != nil {
+		return fmt.Errorf("Error while deleting feed follow %v", err)
+	}
+
+	return nil
 }
 
 func handlerFollowing(s *state, _ command, user database.User) error {
