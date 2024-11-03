@@ -43,7 +43,7 @@ Gator is a command-line tool for managing RSS feeds and users, written in Go. It
 
 3. Build the project:
     ```bash
-    go build -o gator main.go
+    go build
     ```
 
 ## Configuration
