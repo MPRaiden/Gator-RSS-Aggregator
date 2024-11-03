@@ -76,7 +76,7 @@ func main() {
 	cmds.register("register", handlerRegister)
 	cmds.register("reset", handlerResetDB)
 	cmds.register("users", handlerGetUsers)
-	cmds.register("agg", handlerFetchFeed)
+	cmds.register("agg", handlerAgg)
 	cmds.register("feeds", handlerListFeeds)
 	cmds.register("addfeed", middlewareLoggedIn(handlerAddFeed))
 	cmds.register("follow", middlewareLoggedIn(handlerFollow))
@@ -262,15 +262,25 @@ func handlerFollow(s *state, cmd command, user database.User) error {
 	return nil
 }
 
-func handlerFetchFeed(s *state, cmd command) error {
-	ctx := context.Background()
-	rssFeed, err := fetchFeed(ctx, "https://www.wagslane.dev/index.xml")
-	if err != nil {
-		return fmt.Errorf("Error while fetching feed: %v", err)
+func handlerAgg(s *state, cmd command) error {
+	if len(cmd.arguments) != 1 {
+		return fmt.Errorf("agg command requires exactly one argument: time_between_reqs")
 	}
-	fmt.Println(*rssFeed)
+	timeFromCmd := cmd.arguments[0]
 
-	return nil
+	timeBetweenRequests, err := time.ParseDuration(timeFromCmd)
+	if err != nil {
+		return fmt.Errorf("Error while parsing time duration %v", err)
+	}
+
+	fmt.Printf("Collecting feed every %v\n", timeBetweenRequests)
+	ticker := time.NewTicker(timeBetweenRequests)
+	for ; ; <-ticker.C {
+		err := scrapeFeeds(s)
+		if err != nil {
+			return fmt.Errorf("Error while scrapping feeds %v", err)
+		}
+	}
 }
 
 func handlerLogin(s *state, cmd command) error {
