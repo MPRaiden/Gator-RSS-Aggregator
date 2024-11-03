@@ -40,7 +40,7 @@ type RSSFeed struct {
 		Title       string    `xml:"title"`
 		Link        string    `xml:"link"`
 		Description string    `xml:"description"`
-		Item        []RSSItem `xml:"item"`
+		Items       []RSSItem `xml:"item"`
 	} `xml:"channel"`
 }
 
@@ -111,6 +111,29 @@ func main() {
 	}
 }
 
+func scrapeFeeds(s *state) error {
+	nextFeed, err := s.db.GetNextFeedToFetch(context.Background())
+	if err != nil {
+		return fmt.Errorf("Error while retrieving next feed to fetch from database %v", err)
+	}
+
+	err = s.db.MarkFeedFetched(context.Background(), nextFeed.ID)
+	if err != nil {
+		return fmt.Errorf("Error while marking feed fetched %v", err)
+	}
+
+	rssFeed, err := fetchFeed(context.Background(), nextFeed.Url)
+	if err != nil {
+		return fmt.Errorf("Error while retrieving feed by url %v", err)
+	}
+
+	for _, item := range rssFeed.Channel.Items {
+		fmt.Printf("* %v\n", item.Title)
+	}
+
+	return nil
+}
+
 func (c *commands) register(name string, f func(*state, command) error) {
 	c.commandNames[name] = f
 }
@@ -152,9 +175,9 @@ func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
 	rssFeed.Channel.Title = html.UnescapeString(rssFeed.Channel.Title)
 	rssFeed.Channel.Description = html.UnescapeString(rssFeed.Channel.Description)
 
-	for i := range rssFeed.Channel.Item {
-		rssFeed.Channel.Item[i].Title = html.UnescapeString(rssFeed.Channel.Item[i].Title)
-		rssFeed.Channel.Item[i].Description = html.UnescapeString(rssFeed.Channel.Item[i].Description)
+	for i := range rssFeed.Channel.Items {
+		rssFeed.Channel.Items[i].Title = html.UnescapeString(rssFeed.Channel.Items[i].Title)
+		rssFeed.Channel.Items[i].Description = html.UnescapeString(rssFeed.Channel.Items[i].Description)
 	}
 
 	return rssFeed, nil
