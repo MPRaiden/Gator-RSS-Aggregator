@@ -29,3 +29,10 @@ SET last_fetched_at = CURRENT_TIMESTAMP,
     updated_at = CURRENT_TIMESTAMP
 WHERE id = $1;
 
+-- name: GetNextFeedToFetch :one
+select *
+from feeds
+order by last_fetched_at nulls first
+limit 1
+;
+
