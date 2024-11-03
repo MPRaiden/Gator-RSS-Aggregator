@@ -52,17 +52,6 @@ func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) error {
 	return err
 }
 
-type Post struct {
-    ID          uuid.UUID 
-    CreatedAt   time.Time
-    UpdatedAt   time.Time
-    Title       string
-    Url         string
-    Description string
-    PublishedAt time.Time
-    FeedID      uuid.UUID     
-}
-
 const getPostsForUser = `-- name: GetPostsForUser :many
 select id, created_at, updated_at, title, url, description, published_at, feed_id
 from posts

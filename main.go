@@ -128,7 +128,27 @@ func scrapeFeeds(s *state) error {
 	}
 
 	for _, item := range rssFeed.Channel.Items {
-		fmt.Printf("* %v\n", item.Title)
+		postArgs := database.CreatePostParams{
+			ID:          uuid.New(),
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
+			Title:       sql.NullString{String: item.Title, Valid: item.Title != ""},
+			Url:         item.Link,
+			Description: sql.NullString{String: item.Description, Valid: item.Description != ""},
+			FeedID:      uuid.NullUUID{UUID: nextFeed.ID, Valid: true},
+		}
+
+		// Parse PubDate into time.Time
+		parsedTime, err := time.Parse(time.RFC1123Z, item.PubDate) // Adjust format if needed
+		if err != nil {
+			return fmt.Errorf("Error parsing time %v", err)
+		}
+		postArgs.PublishedAt = parsedTime
+
+		err = s.db.CreatePost(context.Background(), postArgs)
+		if err != nil {
+			return fmt.Errorf("Error while creating database post %v", err)
+		}
 	}
 
 	return nil
