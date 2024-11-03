@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 
 	"github.com/MPRaiden/gator/internal/config"
 	"github.com/MPRaiden/gator/internal/database"
@@ -147,6 +148,10 @@ func scrapeFeeds(s *state) error {
 
 		err = s.db.CreatePost(context.Background(), postArgs)
 		if err != nil {
+			// Check for a duplicate key error
+			if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
+				continue
+			}
 			return fmt.Errorf("Error while creating database post %v", err)
 		}
 	}
