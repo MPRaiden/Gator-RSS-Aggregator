@@ -11,3 +11,10 @@ values (
     $8
     );
 
+-- name: GetPostsForUser :many
+select *
+from posts
+order by created_at desc
+limit $1
+;
+
