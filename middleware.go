@@ -14,7 +14,6 @@ func middlewareLoggedIn(handler func(s *state, cmd command, user database.User) 
 		}
 		return handler(s, cmd, user)
 	}
-
 	// Return the named function
 	return checkLoggedIn
 }
