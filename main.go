@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -78,6 +79,7 @@ func main() {
 	cmds.register("reset", handlerResetDB)
 	cmds.register("users", handlerGetUsers)
 	cmds.register("agg", handlerAgg)
+	cmds.register("browse", handlerBrowse)
 	cmds.register("feeds", handlerListFeeds)
 	cmds.register("addfeed", middlewareLoggedIn(handlerAddFeed))
 	cmds.register("follow", middlewareLoggedIn(handlerFollow))
@@ -110,6 +112,32 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func handlerBrowse(s *state, cmd command) error {
+	var limit int
+	if len(cmd.arguments) < 1 {
+		limit = 2
+	} else {
+		parsedLimit, err := strconv.Atoi(cmd.arguments[0])
+		if err != nil {
+			return fmt.Errorf("Error while parsing string to int32 %v", err)
+		}
+		limit = parsedLimit
+	}
+
+	posts, err := s.db.GetPostsForUser(context.Background(), int32(limit))
+	if err != nil {
+		return fmt.Errorf("Error while retrieving posts from database %v", err)
+	}
+
+	for _, post := range posts {
+		fmt.Printf("*Title: %v\n", post.Title)
+		fmt.Printf("*Description: %v\n", post.Description)
+		fmt.Printf("*Url: %v\n", post.Url)
+	}
+
+	return nil
 }
 
 func scrapeFeeds(s *state) error {
