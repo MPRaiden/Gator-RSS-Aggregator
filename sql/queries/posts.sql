@@ -1,4 +1,4 @@
--- name: CreatePost :one
+-- name: CreatePost :exec
 insert into posts (id, created_at, updated_at, title, url, description, published_at, feed_id)
 values (
     $1,
@@ -9,6 +9,5 @@ values (
     $6,
     $7,
     $8
-    )
-returning *;
+    );
 
